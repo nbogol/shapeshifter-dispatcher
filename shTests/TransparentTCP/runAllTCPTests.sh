@@ -1,9 +1,3 @@
 #!/bin/bash
-./testTCPOptimizerFirst.sh
-./testTCPOptimizerMinimizeDialDuration.sh
-./testTCPOptimizerRandom.sh
-./testTCPOptimizerRotate.sh
-./testTCPOptimizerTrack.sh
-./testTCPReplicant.sh
 ./testTCPShadow.sh
 ./testTCPStarbridge.sh

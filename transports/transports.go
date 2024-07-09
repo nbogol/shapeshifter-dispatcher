@@ -69,15 +69,7 @@ func ParseArgsShadow(args string, enableLocket bool, logDir string) (*shadow.Tra
 		return nil, errors.New("shadow options json decoding error")
 	}
 
-	publicKeyBytes, decodeError := base64.StdEncoding.DecodeString(config.ServerPublicKey)
-	if decodeError != nil {
-		return nil, errors.New("public key bytes were not base64 compatible")
-	}
-
-	trimmedPublicKeyBytes := publicKeyBytes[1:]
-	trimmedPublicKeyString := base64.StdEncoding.EncodeToString(trimmedPublicKeyBytes)
-	
-	transport := shadow.NewTransport(config.ServerAddress, trimmedPublicKeyString, config.CipherName, config.LogDir)
+	transport := shadow.NewTransport(config.ServerAddress, config.ServerPublicKey, config.CipherName, config.LogDir)
 
 	return &transport, nil
 }
@@ -96,13 +88,6 @@ func ParseArgsShadowServer(args string, enableLocket bool, logDir string) (*shad
 	if jsonError != nil {
 		return nil, errors.New("shadow server options json decoding error")
 	}
-
-	privateKeyBytes, decodeError := base64.StdEncoding.DecodeString(config.ServerPrivateKey)
-	if decodeError != nil {
-		return nil, errors.New("private key bytes were not base64 compatible")
-	}
-	trimmedPrivateKeyBytes := privateKeyBytes[1:]
-	config.ServerPrivateKey = base64.StdEncoding.EncodeToString(trimmedPrivateKeyBytes)
 
 	return &config, nil
 }
@@ -149,14 +134,6 @@ func ParseArgsStarbridgeClient(args string, dialer proxy.Dialer) (*Starbridge.Tr
 		return nil, errors.New("starbridge client options json decoding error")
 	}
 
-	publicKeyBytes, decodeError := base64.StdEncoding.DecodeString(config.ServerPublicKey)
-	if decodeError != nil {
-		return nil, errors.New("public key bytes were not base64 compatible")
-	}
-	
-	trimmedPublicKeyBytes := publicKeyBytes[1:]
-	config.ServerPublicKey = base64.StdEncoding.EncodeToString(trimmedPublicKeyBytes)
-
 	transport := Starbridge.TransportClient{
 		Config:  config,
 		Address: config.ServerAddress,
@@ -168,17 +145,8 @@ func ParseArgsStarbridgeClient(args string, dialer proxy.Dialer) (*Starbridge.Tr
 
 func ParseArgsStarbridgeServer(args string) (*Starbridge.ServerConfig, error) {
 	var config Starbridge.ServerConfig
-
 	bytes := []byte(args)
 	jsonError := json.Unmarshal(bytes, &config)
-
-	privateKeyBytes, decodeError := base64.StdEncoding.DecodeString(config.ServerPrivateKey)
-	if decodeError != nil {
-		return nil, errors.New("private key bytes were not base64 compatible")
-	}
-	
-	trimmedPrivateKeyBytes := privateKeyBytes[1:]
-	config.ServerPrivateKey = base64.StdEncoding.EncodeToString(trimmedPrivateKeyBytes)
 
 	if jsonError != nil {
 		return nil, errors.New("starbridge server options json decoding error")
@@ -332,7 +300,7 @@ func parsedTransport(otc map[string]interface{}, dialer proxy.Dialer, enableLock
 
 func CreateShadowConfigs(address string, bindAddress *string) error {
 	keyExchange := ecdh.Generic(elliptic.P256())
-	
+
 	ephemeralPrivateKey, ephemeralPublicKey, keyError := keyExchange.GenerateKey(rand.Reader)
 	if keyError != nil {
 		return keyError
@@ -357,16 +325,16 @@ func CreateShadowConfigs(address string, bindAddress *string) error {
 	if keyByteError != nil {
 		return keyByteError
 	}
-	
+
 	privateKeyString := base64.StdEncoding.EncodeToString(privateKeyBytes)
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKeyBytes)
 
 	shadowServerConfig := shadow.ServerConfig{
-		ServerAddress: 	  address,
+		ServerAddress:    address,
 		ServerPrivateKey: privateKeyString,
-		CipherName:		  "darkstar",
-		Transport: 		  "Shadow",
-		BindAddress: 	  bindAddress,
+		CipherName:       "darkstar",
+		Transport:        "Shadow",
+		BindAddress:      bindAddress,
 	}
 
 	serverJsonBytes, marshalError := json.MarshalIndent(shadowServerConfig, "", "  ")
@@ -377,8 +345,8 @@ func CreateShadowConfigs(address string, bindAddress *string) error {
 	shadowClientConfig := shadow.ClientConfig{
 		ServerAddress:   address,
 		ServerPublicKey: publicKeyString,
-		CipherName: 	 "darkstar",
-		Transport: 		 "Shadow",
+		CipherName:      "darkstar",
+		Transport:       "Shadow",
 	}
 
 	clientJsonBytes, marshalError := json.MarshalIndent(shadowClientConfig, "", "  ")
@@ -390,7 +358,7 @@ func CreateShadowConfigs(address string, bindAddress *string) error {
 	if serverJsonError != nil {
 		return serverJsonError
 	}
-	
+
 	clientJsonError := os.WriteFile("ShadowClientConfig.json", clientJsonBytes, 0777)
 	if clientJsonError != nil {
 		return clientJsonError
@@ -400,8 +368,8 @@ func CreateShadowConfigs(address string, bindAddress *string) error {
 }
 
 func CreateStarbridgeConfigs(address string, bindAddress *string) error {
-		keyExchange := ecdh.Generic(elliptic.P256())
-	
+	keyExchange := ecdh.Generic(elliptic.P256())
+
 	ephemeralPrivateKey, ephemeralPublicKey, keyError := keyExchange.GenerateKey(rand.Reader)
 	if keyError != nil {
 		return keyError
@@ -426,21 +394,21 @@ func CreateStarbridgeConfigs(address string, bindAddress *string) error {
 	if keyByteError != nil {
 		return keyByteError
 	}
-	
+
 	privateKeyString := base64.StdEncoding.EncodeToString(privateKeyBytes)
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKeyBytes)
 
-	starbridgeClientConfig := Starbridge.ClientConfig {
-		ServerAddress: address,
+	starbridgeClientConfig := Starbridge.ClientConfig{
+		ServerAddress:   address,
 		ServerPublicKey: publicKeyString,
-		Transport: "Starbridge",
+		Transport:       "Starbridge",
 	}
 
-	starbridgeServerConfig := Starbridge.ServerConfig {
-		ServerAddress: address,
+	starbridgeServerConfig := Starbridge.ServerConfig{
+		ServerAddress:    address,
 		ServerPrivateKey: privateKeyString,
-		Transport: "Starbridge",
-		BindAddress: bindAddress,
+		Transport:        "Starbridge",
+		BindAddress:      bindAddress,
 	}
 
 	serverJsonBytes, marshalError := json.MarshalIndent(starbridgeServerConfig, "", "  ")
@@ -457,7 +425,7 @@ func CreateStarbridgeConfigs(address string, bindAddress *string) error {
 	if serverJsonError != nil {
 		return serverJsonError
 	}
-	
+
 	clientJsonError := os.WriteFile("StarbridgeClientConfig.json", clientJsonBytes, 0777)
 	if clientJsonError != nil {
 		return clientJsonError
@@ -467,48 +435,48 @@ func CreateStarbridgeConfigs(address string, bindAddress *string) error {
 }
 
 func CreateReplicantConfigs(address string, isToneburst bool, isPolish bool, bindAddress *string) error {
-	var polishClient *replicant.DarkStarPolishClientJsonConfig = nil 
-	var polishServer *replicant.DarkStarPolishServerJsonConfig = nil 
+	var polishClient *replicant.DarkStarPolishClientJsonConfig = nil
+	var polishServer *replicant.DarkStarPolishServerJsonConfig = nil
 	var toneburstClient *toneburst.StarburstConfig = nil
 	var toneburstServer *toneburst.StarburstConfig = nil
 	if isPolish {
-			keyExchange := ecdh.Generic(elliptic.P256())
-	
-	ephemeralPrivateKey, ephemeralPublicKey, keyError := keyExchange.GenerateKey(rand.Reader)
-	if keyError != nil {
-		return keyError
-	}
+		keyExchange := ecdh.Generic(elliptic.P256())
 
-	point, ok := ephemeralPublicKey.(ecdh.Point)
-	if !ok {
-		return errors.New("could not convert client public key to point")
-	}
+		ephemeralPrivateKey, ephemeralPublicKey, keyError := keyExchange.GenerateKey(rand.Reader)
+		if keyError != nil {
+			return keyError
+		}
 
-	bytes := elliptic.Marshal(elliptic.P256(), point.X, point.Y)
-	if bytes == nil {
-		return errors.New("MarshalCompressed returned nil")
-	}
+		point, ok := ephemeralPublicKey.(ecdh.Point)
+		if !ok {
+			return errors.New("could not convert client public key to point")
+		}
 
-	privateKeyBytes, ok := ephemeralPrivateKey.([]byte)
-	if !ok {
-		return errors.New("could not convert private key to bytes")
-	}
+		bytes := elliptic.Marshal(elliptic.P256(), point.X, point.Y)
+		if bytes == nil {
+			return errors.New("MarshalCompressed returned nil")
+		}
 
-	publicKeyBytes, keyByteError := shadowsocks.PublicKeyToKeychainFormatBytes(ephemeralPublicKey)
-	if keyByteError != nil {
-		return keyByteError
-	}
-	
-	privateKeyString := base64.StdEncoding.EncodeToString(privateKeyBytes)
-	publicKeyString := base64.StdEncoding.EncodeToString(publicKeyBytes)
+		privateKeyBytes, ok := ephemeralPrivateKey.([]byte)
+		if !ok {
+			return errors.New("could not convert private key to bytes")
+		}
 
-		polishClient = &replicant.DarkStarPolishClientJsonConfig {
-			ServerAddress: address,
+		publicKeyBytes, keyByteError := shadowsocks.PublicKeyToKeychainFormatBytes(ephemeralPublicKey)
+		if keyByteError != nil {
+			return keyByteError
+		}
+
+		privateKeyString := base64.StdEncoding.EncodeToString(privateKeyBytes)
+		publicKeyString := base64.StdEncoding.EncodeToString(publicKeyBytes)
+
+		polishClient = &replicant.DarkStarPolishClientJsonConfig{
+			ServerAddress:   address,
 			ServerPublicKey: publicKeyString,
 		}
 
-		polishServer = &replicant.DarkStarPolishServerJsonConfig {
-			ServerAddress: address,
+		polishServer = &replicant.DarkStarPolishServerJsonConfig{
+			ServerAddress:    address,
 			ServerPrivateKey: privateKeyString,
 		}
 
@@ -517,7 +485,6 @@ func CreateReplicantConfigs(address string, isToneburst bool, isPolish bool, bin
 		polishClient = nil
 		polishServer = nil
 	}
-
 
 	if isToneburst {
 		toneburstClient = &toneburst.StarburstConfig{
@@ -529,26 +496,26 @@ func CreateReplicantConfigs(address string, isToneburst bool, isPolish bool, bin
 			Type: "starbridge",
 			Mode: "SMTPServer",
 		}
-		
-	}  else {
+
+	} else {
 		golog.Info("Invalid toneburst name.  Setting value to nil")
-			toneburstClient = nil
-			toneburstServer = nil
+		toneburstClient = nil
+		toneburstServer = nil
 	}
-	
-	replicantServerConfig := replicant.ServerJsonConfig {
+
+	replicantServerConfig := replicant.ServerJsonConfig{
 		ServerAddress: address,
-		Toneburst: *toneburstServer,
-		Polish: *polishServer,
-		Transport: "Replicant",
-		BindAddress: bindAddress,
+		Toneburst:     *toneburstServer,
+		Polish:        *polishServer,
+		Transport:     "Replicant",
+		BindAddress:   bindAddress,
 	}
-	
-	replicantClientConfig := replicant.ClientJsonConfig {
+
+	replicantClientConfig := replicant.ClientJsonConfig{
 		ServerAddress: address,
-		Toneburst: *toneburstClient,
-		Polish: *polishClient,
-		Transport: "Replicant",
+		Toneburst:     *toneburstClient,
+		Polish:        *polishClient,
+		Transport:     "Replicant",
 	}
 
 	serverJsonBytes, marshalError := json.MarshalIndent(replicantServerConfig, "", "  ")
@@ -565,7 +532,7 @@ func CreateReplicantConfigs(address string, isToneburst bool, isPolish bool, bin
 	if serverJsonError != nil {
 		return serverJsonError
 	}
-	
+
 	clientJsonError := os.WriteFile("ReplicantClientConfig.json", clientJsonBytes, 0777)
 	if clientJsonError != nil {
 		return clientJsonError

@@ -21,3 +21,4 @@ shapeshifter-dispatcher
 *.json
 bloomfilter.gob
 go.sum
+bloomfilter.gob

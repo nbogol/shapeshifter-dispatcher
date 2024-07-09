@@ -8,7 +8,13 @@ FILE_PATH="$SCRIPT_DIR/testTCPStarbridgeOutput.txt"
 # Update and build code
 cd $EXECUTABLE_DIR
 go install
-go build .
+
+# Check to see if GOPATH has been set
+# Set it if it has not
+if [ -z "${GOPATH}" ]; then
+    # GOPATH is unset or set to an empty string, set it
+    GOPATH="$HOME/go"
+fi
 
 # remove text from the output file
 rm $FILE_PATH
@@ -18,13 +24,13 @@ nc -l 3333 >$FILE_PATH &
 
 # Run the transport server
 
-./shapeshifter-dispatcher -transparent -server -state state -target 127.0.0.1:3333 -transports Starbridge -bindaddr Starbridge-127.0.0.1:2222 -optionsFile ConfigFiles/StarbridgeServerConfig.json -logLevel DEBUG -enableLogging &
+$GOPATH/bin/shapeshifter-dispatcher -transparent -server -state state -target 127.0.0.1:3333 -transports Starbridge -bindaddr Starbridge-127.0.0.1:2222 -optionsFile ConfigFiles/StarbridgeServerConfig.json -logLevel DEBUG -enableLogging &
 
 sleep 1
 
 # Run the transport client
 
-./shapeshifter-dispatcher -transparent -client -state state -transports Starbridge -proxylistenaddr 127.0.0.1:1443 -optionsFile ConfigFiles/StarbridgeClientConfig.json -logLevel DEBUG -enableLogging &
+$GOPATH/bin/shapeshifter-dispatcher -transparent -client -state state -transports Starbridge -proxylistenaddr 127.0.0.1:1443 -optionsFile ConfigFiles/StarbridgeClientConfig.json -logLevel DEBUG -enableLogging &
 
 sleep 1
 
