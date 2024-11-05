@@ -7,7 +7,6 @@ FILE_PATH="$SCRIPT_DIR/testTCPOptimizerRandomOutput.txt"
 # Update and build code
 cd $EXECUTABLE_DIR
 go install
-go build .
 
 # remove text from the output file
 rm $FILE_PATH
